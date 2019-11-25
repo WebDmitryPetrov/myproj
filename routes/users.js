@@ -5,17 +5,40 @@ var uuid = require('uuid');
 let users = require('../models/users')
 let films = require('../models/films')
 
+const jose = require('jose')
+const {
+  JWE,   // JSON Web Encryption (JWE)
+  JWK,   // JSON Web Key (JWK)
+  JWKS,  // JSON Web Key Set (JWKS)
+  JWS,   // JSON Web Signature (JWS)
+  JWT,   // JSON Web Token (JWT)
+  errors // errors utilized by jose
+} = jose
+const key = JWK.asKey("HelloMyLilFriend")
+/* GET users listing. */
+
 router.post('/users/login', function(req,res,next) {
   const user = users.find(item => item.name === req.body.name)
-  if(user && user.password === req.body.password){
-  user.token = uuid()
-  user.exp = new Date()
-  user.exp.setMinutes(user.exp.getMinutes() + 10)
-res.send(users);
-} else {
-  res.status(401).send();
-}
-next()      
+  const expires = new Date()
+  expires.setMinutes(expires.getMinutes() + 120)
+  if(user && user.password === req.body.password) {
+    user.token = JWT.sign({
+      iss: "ImCoder",
+      sub: 'Auth',
+      iat: new Date(),
+      exp: expires,
+      header: {
+        typ: "JWT",
+        alg: "HS256"
+      },
+      jti: uuid() 
+    },key, {
+      algorithm: "HS256"
+    })
+    res.send(users);
+  } else {
+    res.status(401).send("Unauthorized")
+  }
 });
 
 let auth = function(req,res,next) {
